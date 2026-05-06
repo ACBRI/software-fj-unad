@@ -41,9 +41,12 @@ def ejecutar_todos() -> GestorSistema:
     """Corre los 10+ escenarios y devuelve el gestor con el estado final."""
     gestor = GestorSistema()
 
-    sala = ReservaSala("Sala Andes", tarifa_base=40_000, capacidad=12)
-    proyector = AlquilerEquipo("Proyector 4K", tarifa_base=25_000, tipo_equipo="Proyector")
-    asesoria = AsesoriaEspecializada("Consultoría Cloud", tarifa_base=120_000, area="DevOps")
+    sala = ReservaSala("SALA-ANDES", capacidad_maxima=12, tarifa_base=40_000, equipada=True)
+    proyector = AlquilerEquipo("EQ-PROY1", tipo_equipo="proyector",
+                               tarifa_base=25_000, incluye_seguro=True)
+    asesoria = AsesoriaEspecializada("ASE-CLOUD", categoria="arquitectura",
+                                     tarifa_base=120_000, nivel_asesor="experto",
+                                     modalidad="virtual")
 
     _ejecutar("1. Registro de servicios válidos", lambda: (
         gestor.registrar_servicio(sala),
@@ -84,7 +87,10 @@ def ejecutar_todos() -> GestorSistema:
         lambda: gestor.procesar_reserva(reserva_ok),
     )
 
-    reserva_cancelada = gestor.crear_reserva(cliente_2, asesoria, horas=12)
+    # AsesoriaEspecializada permite máximo 4h por sesión, pero la creación
+    # de la reserva no llama a calcular_costo — eso solo ocurre al procesar.
+    # Como aquí cancelamos antes de procesar, las 12h no llegan a validarse.
+    reserva_cancelada = gestor.crear_reserva(cliente_2, asesoria, horas=2)
     reserva_cancelada.cancelar()
     _ejecutar(
         "10. Procesar reserva cancelada (debe fallar controladamente)",
@@ -96,8 +102,8 @@ def ejecutar_todos() -> GestorSistema:
         gestor.crear_reserva(cliente_2, proyector, horas=2),
     ))
 
-    _ejecutar("12. Cálculo con descuento inválido (>100%)", lambda: sala.calcular_costo(
-        horas=2, descuento=1.5
+    _ejecutar("12. Cálculo con impuesto inválido (negativo)", lambda: sala.calcular_costo(
+        duracion_horas=2, impuesto=-0.5
     ))
 
     _log.info("=" * 60)

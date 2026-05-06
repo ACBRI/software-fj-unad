@@ -1,55 +1,115 @@
 """
-Clase Cliente — STUB pendiente de implementación.
+Módulo: Gestión de Clientes con Validaciones Robustas
 
-Responsable: Jhon Alejandro Betancurt Osorio (issue #2)
+Desarrollado por: Jhon Alejandro Betancurt Osorio (issue #2, rama feat/cliente)
+Integrado con el núcleo del sistema por: Andrés Camilo Briñez Núñez
 
-Contrato mínimo esperado:
-    - Atributos encapsulados: cedula, nombre, email, telefono
-    - Validaciones estrictas en cada setter:
-        * cedula: solo dígitos, 7-10 caracteres
-        * email: formato usuario@dominio.tld
-        * telefono: 7-15 dígitos, opcional prefijo +
-        * nombre: no vacío, mínimo 3 caracteres
-    - Debe lanzar ClienteInvalidoError ante datos inválidos
-    - Hereda de EntidadBase y sobreescribe describir() + validar()
+Validaciones implementadas:
+    - Cédula: solo dígitos, 7 a 10 caracteres.
+    - Nombre: no vacío, mínimo 3 caracteres, sin números.
+    - Email: regex r'^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$'.
+    - Teléfono: 7 a 15 dígitos, prefijo '+' opcional.
 """
 
-from __future__ import annotations
+import re
 
 from src.core.entidad_base import EntidadBase
 from src.core.excepciones import ClienteInvalidoError
+from src.core.logger import obtener_logger
+
+_log = obtener_logger(__name__)
 
 
 class Cliente(EntidadBase):
-    """Placeholder — sustituir por la implementación de Jhon Alejandro."""
+    """Cliente del sistema Software FJ con validaciones estrictas en setters."""
 
-    def __init__(self, cedula: str, nombre: str, email: str, telefono: str) -> None:
-        super().__init__(identificador=cedula)
-        self._cedula = cedula
-        self._nombre = nombre
-        self._email = email
-        self._telefono = telefono
-        self.validar()
+    def __init__(self, cedula, nombre, email, telefono):
+        super().__init__(identificador=str(cedula))
+        self.cedula = cedula
+        self.nombre = nombre
+        self.email = email
+        self.telefono = telefono
+
+    # --- Atributos encapsulados con @property y validación en setters ---
 
     @property
-    def cedula(self) -> str:
+    def cedula(self):
         return self._cedula
 
+    @cedula.setter
+    def cedula(self, valor):
+        if not str(valor).isdigit() or not (7 <= len(str(valor)) <= 10):
+            msg = f"Cédula inválida: {valor}. Debe ser numérica (7-10 dígitos)."
+            _log.error(msg)
+            raise ClienteInvalidoError(msg)
+        self._cedula = str(valor)
+
     @property
-    def nombre(self) -> str:
+    def nombre(self):
         return self._nombre
 
-    def describir(self) -> str:
-        return f"Cliente {self._nombre} (c.c. {self._cedula})"
+    @nombre.setter
+    def nombre(self, valor):
+        if not valor or len(valor.strip()) < 3 or any(c.isdigit() for c in valor):
+            msg = "Nombre inválido: No debe estar vacío, tener mínimo 3 letras y no contener números."
+            _log.error(msg)
+            raise ClienteInvalidoError(msg)
+        self._nombre = valor.strip()
 
-    def validar(self) -> None:
-        if not self._cedula or not self._cedula.isdigit():
-            raise ClienteInvalidoError(
-                f"Cédula inválida: {self._cedula!r} (debe contener solo dígitos)."
-            )
-        if not self._nombre or len(self._nombre.strip()) < 3:
-            raise ClienteInvalidoError(
-                f"Nombre inválido: {self._nombre!r} (mínimo 3 caracteres)."
-            )
-        if "@" not in self._email or "." not in self._email:
-            raise ClienteInvalidoError(f"Email con formato inválido: {self._email!r}.")
+    @property
+    def email(self):
+        return self._email
+
+    @email.setter
+    def email(self, valor):
+        regex = r'^[\w.+-]+@[\w-]+\.[\w.-]+$'
+        if not re.match(regex, str(valor)):
+            msg = f"Email inválido: {valor}. No cumple con el formato estándar."
+            _log.error(msg)
+            raise ClienteInvalidoError(msg)
+        self._email = valor
+
+    @property
+    def telefono(self):
+        return self._telefono
+
+    @telefono.setter
+    def telefono(self, valor):
+        limpio = str(valor).replace("+", "")
+        if not limpio.isdigit() or not (7 <= len(limpio) <= 15):
+            msg = f"Teléfono inválido: {valor}. Debe tener entre 7 y 15 dígitos."
+            _log.error(msg)
+            raise ClienteInvalidoError(msg)
+        self._telefono = valor
+
+    # --- Métodos abstractos heredados de EntidadBase ---
+
+    def validar(self):
+        """Confirma la integridad de los atributos (los setters ya validaron)."""
+        return True
+
+    def describir(self):
+        """Descripción legible del cliente."""
+        return f"Cliente: {self.nombre} | C.C: {self.cedula} | Email: {self.email} | Tel: {self.telefono}"
+
+    def __str__(self):
+        return self.describir()
+
+
+# --- Bloque de pruebas manuales (preservado del autor original) ---
+if __name__ == "__main__":
+    print("--- Iniciando pruebas del módulo Cliente ---")
+    try:
+        c1 = Cliente("10123456", "Alejandro Betancurt", "jhabetancurt@unad.edu.co", "3115576583")
+        print(f"ÉXITO: {c1.describir()}")
+
+        print("\nProbando cédula inválida...")
+        c2 = Cliente("123", "Jhon", "error@test.com", "3001234")
+    except ClienteInvalidoError as e:
+        print(f"CAPTURA CORRECTA: {e}")
+
+    try:
+        print("\nProbando email inválido...")
+        c3 = Cliente("10203040", "Carlos Perez", "email_malo_sin_arroba", "3005554433")
+    except ClienteInvalidoError as e:
+        print(f"CAPTURA CORRECTA: {e}")

@@ -23,14 +23,25 @@ from src.modelos.servicio import Servicio
 class _ServicioFalso(Servicio):
     """Implementación mínima de Servicio para tests unitarios."""
 
-    def __init__(self, nombre="Test", tarifa=100.0):
+    def __init__(self, nombre="ServicioTest", tarifa=100.0):
         super().__init__(nombre, tarifa)
 
-    def calcular_costo(self, horas, *, impuesto=0.19, descuento=0.0):
-        return round(self._tarifa_base * horas * (1 - descuento) * (1 + impuesto), 2)
+    def calcular_costo(self, duracion_horas, *, impuesto=None,
+                       descuento=0.0, cliente_premium=False):
+        tasa = impuesto if impuesto is not None else self.IVA_GENERAL
+        if not (0 <= descuento <= 1):
+            raise ValueError("Descuento fuera de rango.")
+        return round(
+            self.tarifa_base * duracion_horas * (1 - descuento) * (1 + tasa), 2
+        )
 
     def describir(self):
         return f"ServicioFalso({self.nombre})"
+
+    def validar_parametros(self, duracion_horas, **kwargs):
+        if duracion_horas <= 0:
+            raise ValueError("Duración debe ser > 0.")
+        return True
 
 
 def _cliente_demo(cedula="1023456789", nombre="Ana Torres",
